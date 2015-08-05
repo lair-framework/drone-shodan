@@ -178,6 +178,7 @@ func main() {
 				host, err := s.Host(ip, url.Values{})
 				if err != nil {
 					log.Printf("Error: Error returned from shodan for %s. Error %s", ip, err.Error())
+					continue
 				}
 				h := lair.Host{
 					Hostnames:      host.Hostnames,
