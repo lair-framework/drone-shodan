@@ -230,10 +230,10 @@ func main() {
 	droneRes := &client.Response{}
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Fatal: Error %s", err.Error())
 	}
 	if err := json.Unmarshal(body, droneRes); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Fatal: Could not unmarshal JSON. Error %s", err.Error())
 	}
 	if droneRes.Status == "Error" {
 		log.Fatalf("Fatal: Import failed. Error %s", droneRes.Message)
