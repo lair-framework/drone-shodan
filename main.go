@@ -29,8 +29,8 @@ addresses, this drone uses shodan's 'net' and 'host' search to identify and impo
 services into lair. Requests are made to shodan concurrently using a pool of 10 goroutines.
 
 Usage:
-  drone-shodan <id> <filename>
-  export LAIR_ID=<id>; drone-shodan <filename>
+  drone-shodan [options] <id> <filename>
+  export LAIR_ID=<id>; drone-shodan [options] <filename>
 Options:
   -v              show version and exit
   -h              show usage and exit
