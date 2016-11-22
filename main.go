@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lair-framework/api-server/client"
 	"github.com/lair-framework/go-lair"
@@ -20,7 +21,7 @@ import (
 )
 
 const (
-	version  = "1.0.1"
+	version  = "1.0.2"
 	tool     = "shodan"
 	osWeight = 50
 	usage    = `
@@ -179,6 +180,7 @@ func main() {
 	for i := 0; i < 10; i++ {
 		go func(s shodan.Client) {
 			for ip := range ipChan {
+				time.Sleep(7*time.Second)
 				host, err := s.Host(ip, url.Values{})
 				if err != nil {
 					log.Printf("Error: Error returned from shodan for %s. Error %s", ip, err.Error())
