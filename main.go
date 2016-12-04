@@ -69,6 +69,69 @@ func shodanIPsFromShodanNetSearch(client *shodan.Client, netblock string) ([]str
 	return ips, nil
 }
 
+func gatherIPsToSearch(sclient *shodan.Client, filename string) ([]string, error) {
+	ips := []string{}
+	cidrs := []string{}
+
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("Fatal: Could not open file. Error %s", err.Error())
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		_, _, err := net.ParseCIDR(line)
+		if err != nil {
+			ip := net.ParseIP(line)
+			if ip == nil {
+				log.Fatalf("Fatal: %s in file is not an ip or cidr netblock", ip)
+			}
+			ips = append(ips, line)
+		} else {
+			cidrs = append(cidrs, line)
+		}
+	}
+
+	if len(cidrs) > 0 {
+		lk := sync.Mutex{}
+		wg := sync.WaitGroup{}
+		wg.Add(10)
+		cidrsChan := make(chan string, 10)
+
+		for i := 0; i < 10; i++ {
+			go func(s shodan.Client) {
+				for cidr := range cidrsChan {
+					hostCount, err := s.HostCount("net:"+cidr, []string{})
+					if err != nil {
+						log.Fatalf("Fatal: Error returned from shodan. Error %s", err.Error())
+					}
+					time.Sleep(5*time.Second)
+					if hostCount.Total > 0 {
+						if netIPs, err := shodanIPsFromShodanNetSearch(sclient, cidr); err != nil {
+							log.Fatalf("Fatal: Error returned from shodan. Error %s", err.Error())
+						} else {
+							lk.Lock()
+							ips = append(ips, netIPs...)
+							lk.Unlock()
+						}
+					}
+					time.Sleep(5*time.Second)
+				}
+				wg.Done()
+			}(*sclient)
+		}
+
+		for _, cidr := range cidrs {
+			cidrsChan <- cidr
+		}
+		close(cidrsChan)
+		wg.Wait()
+	}
+
+	return ips, nil
+}
+
 func main() {
 	showVersion := flag.Bool("v", false, "")
 	insecureSSL := flag.Bool("k", false, "")
@@ -148,28 +211,9 @@ func main() {
 	}
 
 	ips := []string{}
-	file, err := os.Open(filename)
+	ips, err = gatherIPsToSearch(sclient, filename)
 	if err != nil {
-		log.Fatalf("Fatal: Could not open file. Error %s", err.Error())
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		_, _, err := net.ParseCIDR(line)
-		if err != nil {
-			ip := net.ParseIP(line)
-			if ip == nil {
-				log.Fatalf("Fatal: %s in file is not an ip or cidr netblock", ip)
-			}
-			ips = append(ips, line)
-		} else {
-			if netIPs, err := shodanIPsFromShodanNetSearch(sclient, line); err != nil {
-				log.Fatalf("Fatal: Error returned from shodan. Error %s", err.Error())
-			} else {
-				ips = append(ips, netIPs...)
-			}
-		}
+		log.Fatalf("Fatal: Can't gather IPs from file %s: error %s", filename, err.Error())
 	}
 
 	lk := sync.Mutex{}
