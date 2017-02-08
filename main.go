@@ -115,8 +115,8 @@ func gatherIPsToSearch(sclient *shodan.Client, filename string) ([]string, error
 							ips = append(ips, netIPs...)
 							lk.Unlock()
 						}
+						time.Sleep(5*time.Second)
 					}
-					time.Sleep(5*time.Second)
 				}
 				wg.Done()
 			}(*sclient)
